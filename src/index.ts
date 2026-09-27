@@ -122,7 +122,7 @@ const rank = (rule: CounterConfig['list']) => LIST_RULES.indexOf(rule);
 
 export default defineModule<CounterConfig>({
   name: 'counter',
-  version: '0.1.0',
+  version: '0.1.1',
   contract: '^1.1',
   skill: {
     useWhen: 'the app counts something on the server that every visitor shares, such as page views, likes or downloads',

@@ -1,6 +1,6 @@
 {
   "name": "drobek-module-counter",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A drobek platform module: named counters per app (page views, likes, downloads) — POST /__drobek/v1/counter/:key/hit, drobek.counter.hit(key) / get(key) / list().",
   "license": "AGPL-3.0-only",
   "author": "Tomáš Grasl",

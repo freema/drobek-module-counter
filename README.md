@@ -25,9 +25,9 @@ drobek v0.2.0 or newer (module contract 1.1). A self-hosted server, in its
 drobek checkout:
 
 ```sh
-task selfhost:module:add -- drobek-module-counter@0.1.0
+task selfhost:module:add -- drobek-module-counter@0.1.1
 # or the tarball attached to its GitHub release:
-task selfhost:module:add -- https://github.com/freema/drobek-module-counter/releases/download/v0.1.0/drobek-module-counter-0.1.0.tgz
+task selfhost:module:add -- https://github.com/freema/drobek-module-counter/releases/download/v0.1.1/drobek-module-counter-0.1.1.tgz
 ```
 
 The drobek dev stack (`task dev`) takes the same spec:
@@ -137,7 +137,7 @@ One-time, to publish on npm:
 
 1. Publish the first version by hand — Trusted Publishing is configured on an
    existing package: `npm login`, download the release tarball and
-   `npm publish drobek-module-counter-0.1.0.tgz --access public`.
+   `npm publish drobek-module-counter-0.1.1.tgz --access public`.
 2. On npmjs.com → `drobek-module-counter` → Settings → Trusted Publisher →
    GitHub Actions: repository `freema/drobek-module-counter`, workflow
    `ci.yml` (no environment).
