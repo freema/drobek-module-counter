@@ -16,12 +16,8 @@ app shares them. Written against the module contract `^1.1`
   `__drizzle_migrations_mod_counter`); the counters of a deleted app are
   removed (`onAppDelete`, and the `apps(id)` cascade)
 
-> **Not on npm yet.** This module depends on `@drobek/modules` (the module
-> contract) and `@drobek/sdk` from npm, and neither is on the npm registry
-> yet — so neither is `drobek-module-counter`. Until they are, install it from
-> the tarball attached to its [GitHub release](https://github.com/freema/drobek-module-counter/releases);
-> its only dependencies are peers the server provides (`@drobek/modules`,
-> `drizzle-orm`), so installing the tarball fetches nothing from npm.
+Its only dependencies are peers the server provides (`@drobek/modules`,
+`drizzle-orm`), so installing it fetches nothing else from npm.
 
 ## Install on a drobek server
 
@@ -29,16 +25,14 @@ drobek v0.2.0 or newer (module contract 1.1). A self-hosted server, in its
 drobek checkout:
 
 ```sh
-task selfhost:module:add -- https://github.com/freema/drobek-module-counter/releases/download/v0.1.0/drobek-module-counter-0.1.0.tgz
-# once it is on npm:
 task selfhost:module:add -- drobek-module-counter@0.1.0
+# or the tarball attached to its GitHub release:
+task selfhost:module:add -- https://github.com/freema/drobek-module-counter/releases/download/v0.1.0/drobek-module-counter-0.1.0.tgz
 ```
 
 The drobek dev stack (`task dev`) takes the same spec:
 
 ```sh
-task module:add -- https://github.com/freema/drobek-module-counter/releases/download/v0.1.0/drobek-module-counter-0.1.0.tgz
-# once it is on npm:
 task module:add -- drobek-module-counter
 ```
 
@@ -111,17 +105,14 @@ Besides the core codes (`rate_limited`, `unauthorized`, `forbidden`,
 
 ## Develop
 
-Node 22. While `@drobek/*` is not on the npm registry, `package.json` keeps
-the registry ranges (`@drobek/modules` `^0.2.1` as a dev dependency,
-`>=0.2.0` as the peer the server provides) and the committed
-`package-lock.json` pins `@drobek/modules` and `@drobek/sdk` 0.2.1 to
-tarballs in `.drobek-npm/` (git-ignored). `npm run drobek:packages` builds
-them from [freema/drobek](https://github.com/freema/drobek) at `v0.2.1` (a
-shallow clone into `.drobek/`, pnpm, drobek's own npm pack step) — CI does the
-same:
+Node 22. The module contract is on npm as `@freema/drobek-modules` (the
+browser SDK core as `@freema/drobek-sdk`); `package.json` installs them under
+the names the code imports through npm aliases —
+`"@drobek/modules": "npm:@freema/drobek-modules@^0.3.3"` and
+`"@drobek/sdk": "npm:@freema/drobek-sdk@^0.3.3"` in `devDependencies` — and
+keeps `"@drobek/modules": ">=0.2.0"` as the peer the server provides:
 
 ```sh
-npm run drobek:packages   # once; DROBEK_DIR=../drobek to build from an existing checkout at v0.2.1
 npm ci
 npm run build             # dist/ — what a drobek server loads
 npm run typecheck
@@ -129,13 +120,11 @@ npm test                  # the routes through the production pipeline (PGlite) 
 npm run check             # the SKILL.md gate alone (checkSkill)
 ```
 
-To move to another drobek release, `DROBEK_REF=vX.Y.Z npm run
-drobek:packages && DROBEK_REF=vX.Y.Z npm run dev:install-local` (re-pins the
-lockfile) and bump `DROBEK_REF` in `.github/workflows/ci.yml`. Once
-`@drobek/modules` is on npm, drop the pins: `rm -rf node_modules
-package-lock.json && npm install`, and delete the `drobek:packages` step from
-CI. The published package never contains the lockfile, so its manifest names
-no `file:` path.
+To move to another drobek release:
+
+```sh
+npm install --save-dev @drobek/modules@npm:@freema/drobek-modules@^X.Y.Z @drobek/sdk@npm:@freema/drobek-sdk@^X.Y.Z
+```
 
 ## Releasing
 
@@ -144,7 +133,7 @@ CI (`.github/workflows/ci.yml`) runs the checks, packs the module and creates
 the GitHub release with the tarball attached. npm publishing is in the same
 job and stays off until the repository variable `NPM_PUBLISH` is `true`.
 
-One-time, to publish on npm (after `@drobek/modules` is there):
+One-time, to publish on npm:
 
 1. Publish the first version by hand — Trusted Publishing is configured on an
    existing package: `npm login`, download the release tarball and
