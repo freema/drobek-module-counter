@@ -16,27 +16,45 @@ app shares them. Written against the module contract `^1.1`
   `__drizzle_migrations_mod_counter`); the counters of a deleted app are
   removed (`onAppDelete`, and the `apps(id)` cascade)
 
+> **Not on npm yet.** This module depends on `@drobek/modules` (the module
+> contract) and `@drobek/sdk` from npm, and neither is on the npm registry
+> yet — so neither is `drobek-module-counter`. Until they are, install it from
+> the tarball attached to its [GitHub release](https://github.com/freema/drobek-module-counter/releases);
+> its only dependencies are peers the server provides (`@drobek/modules`,
+> `drizzle-orm`), so installing the tarball fetches nothing from npm.
+
 ## Install on a drobek server
 
-drobek v0.2.0 or newer (module contract 1.1). On the server, in the drobek
-checkout:
+drobek v0.2.0 or newer (module contract 1.1). A self-hosted server, in its
+drobek checkout:
 
 ```sh
-task selfhost:module:add -- drobek-module-counter@0.1.0     # or a tarball URL/path from `npm pack`
+task selfhost:module:add -- https://github.com/freema/drobek-module-counter/releases/download/v0.1.0/drobek-module-counter-0.1.0.tgz
+# once it is on npm:
+task selfhost:module:add -- drobek-module-counter@0.1.0
 ```
 
-then add `counter` to `DROBEK_MODULES` in `.env.production` (the short name
-works because the package is `drobek-module-counter`):
+The drobek dev stack (`task dev`) takes the same spec:
+
+```sh
+task module:add -- https://github.com/freema/drobek-module-counter/releases/download/v0.1.0/drobek-module-counter-0.1.0.tgz
+# once it is on npm:
+task module:add -- drobek-module-counter
+```
+
+Both print the `DROBEK_MODULES` line to set and the restart command. Add
+`counter` to `DROBEK_MODULES` (`.env.production` on a self-hosted server,
+`.env` for the dev stack; the short name works because the package is
+`drobek-module-counter`):
 
 ```sh
 DROBEK_MODULES=auth,email,forms,data,proxy,files,counter
 ```
 
-and restart drobek with the command `selfhost:module:add` prints
-(`./scripts/selfhost-compose.sh up -d --wait drobek`). The start applies the module's migration and
-lists it in `platform modules ready`, `/healthz` and `/api/version`. A module
-runs inside the drobek process with the whole database: install only modules
-you trust.
+and restart drobek (self-hosted: `./scripts/selfhost-compose.sh up -d --wait
+drobek`). The start applies the module's migration and lists it in `platform
+modules ready`, `/healthz` and `/api/version`. A module runs inside the
+drobek process with the whole database: install only modules you trust.
 
 ## Use it in an app
 
@@ -93,29 +111,53 @@ Besides the core codes (`rate_limited`, `unauthorized`, `forbidden`,
 
 ## Develop
 
+Node 22. While `@drobek/*` is not on the npm registry, `package.json` keeps
+the registry ranges (`@drobek/modules` `^0.2.1` as a dev dependency,
+`>=0.2.0` as the peer the server provides) and the committed
+`package-lock.json` pins `@drobek/modules` and `@drobek/sdk` 0.2.1 to
+tarballs in `.drobek-npm/` (git-ignored). `npm run drobek:packages` builds
+them from [freema/drobek](https://github.com/freema/drobek) at `v0.2.1` (a
+shallow clone into `.drobek/`, pnpm, drobek's own npm pack step) — CI does the
+same:
+
 ```sh
-npm install
-npm run build       # dist/ — what a drobek server loads
+npm run drobek:packages   # once; DROBEK_DIR=../drobek to build from an existing checkout at v0.2.1
+npm ci
+npm run build             # dist/ — what a drobek server loads
 npm run typecheck
-npm test            # the routes through the production pipeline (PGlite) + the SKILL.md gate
-npm run check       # the SKILL.md gate alone (checkSkill)
+npm test                  # the routes through the production pipeline (PGlite) + the SKILL.md gate
+npm run check             # the SKILL.md gate alone (checkSkill)
 ```
 
-**While `@drobek/*` is not on the npm registry**, `package.json` keeps the
-registry ranges (`@drobek/modules` `^0.2.0` as a dev dependency, `>=0.2.0` as
-the peer the server provides) and the committed `package-lock.json` pins
-`@drobek/modules` and `@drobek/sdk` to local tarballs at
-`../drobek/dist-npm/` (a drobek checkout next to this one, built with its
-npm pack step). `npm install` / `npm ci` then work offline from the lock.
-After rebuilding the tarballs (a new integrity), re-pin them:
+To move to another drobek release, `DROBEK_REF=vX.Y.Z npm run
+drobek:packages && DROBEK_REF=vX.Y.Z npm run dev:install-local` (re-pins the
+lockfile) and bump `DROBEK_REF` in `.github/workflows/ci.yml`. Once
+`@drobek/modules` is on npm, drop the pins: `rm -rf node_modules
+package-lock.json && npm install`, and delete the `drobek:packages` step from
+CI. The published package never contains the lockfile, so its manifest names
+no `file:` path.
 
-```sh
-npm run dev:install-local                     # DROBEK_NPM_DIR=<dir with the .tgz files> to override
-```
+## Releasing
 
-Once `@drobek/modules` is published, drop the pin: `rm package-lock.json &&
-npm install`. The published package never contains the lockfile, so its
-manifest names no `file:` path.
+Bump `version` in `package.json`, commit, tag `v<version>` and push the tag.
+CI (`.github/workflows/ci.yml`) runs the checks, packs the module and creates
+the GitHub release with the tarball attached. npm publishing is in the same
+job and stays off until the repository variable `NPM_PUBLISH` is `true`.
+
+One-time, to publish on npm (after `@drobek/modules` is there):
+
+1. Publish the first version by hand — Trusted Publishing is configured on an
+   existing package: `npm login`, download the release tarball and
+   `npm publish drobek-module-counter-0.1.0.tgz --access public`.
+2. On npmjs.com → `drobek-module-counter` → Settings → Trusted Publisher →
+   GitHub Actions: repository `freema/drobek-module-counter`, workflow
+   `ci.yml` (no environment).
+3. Set the repository variable `NPM_PUBLISH=true` (Settings → Secrets and
+   variables → Actions → Variables).
+
+From then on every `v*` tag publishes with OIDC (no token) and provenance; a
+pre-release (`v0.2.0-rc.1`) goes to the dist-tag `next`, a version npm
+already has is skipped.
 
 ## License
 

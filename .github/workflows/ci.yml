@@ -1,0 +1,139 @@
+# drobek-module-counter — CI
+#
+#   check    typecheck → unit tests (routes through the production pipeline on
+#            PGlite + the SKILL.md gate) → build
+#   release  (tags vX.Y.Z only) `npm pack` → a GitHub release with the tarball
+#            attached (what `task selfhost:module:add -- <tarball URL>`
+#            installs); then, only while the repository variable NPM_PUBLISH
+#            is `true`, `npm publish` with npm Trusted Publishing — OIDC, no
+#            token, provenance attached — skipping a version npm already has.
+#            A pre-release tag (vX.Y.Z-rc.1) is a GitHub pre-release and goes
+#            to the npm dist-tag `next`.
+#
+# @drobek/modules and @drobek/sdk are not on the npm registry yet: the
+# lockfile pins them to file:.drobek-npm/*.tgz, which scripts/drobek-packages.sh
+# builds from freema/drobek at DROBEK_REF (cached per ref).
+#
+# Triggers: pushes to `main` and `v*` tags only (Actions capacity is limited).
+#
+# npm, ONE-TIME: README → Releasing.
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+  PNPM_VERSION: 10.33.2
+  DROBEK_REF: v0.2.1
+
+jobs:
+  check:
+    name: Typecheck · test · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Cache the @drobek tarballs
+        id: drobek-npm
+        uses: actions/cache@v4
+        with:
+          path: .drobek-npm
+          key: drobek-npm-${{ env.DROBEK_REF }}
+
+      - uses: pnpm/action-setup@v4
+        if: steps.drobek-npm.outputs.cache-hit != 'true'
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Build @drobek/modules + @drobek/sdk from freema/drobek@${{ env.DROBEK_REF }}
+        if: steps.drobek-npm.outputs.cache-hit != 'true'
+        run: sh scripts/drobek-packages.sh
+
+      - name: Install (lockfile)
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  release:
+    name: GitHub release (+ npm)
+    runs-on: ubuntu-latest
+    needs: check
+    if: github.ref_type == 'tag'
+    timeout-minutes: 10
+    permissions:
+      contents: write # the GitHub release
+      id-token: write # npm Trusted Publishing (OIDC) + provenance
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: Restore the @drobek tarballs
+        uses: actions/cache/restore@v4
+        with:
+          path: .drobek-npm
+          key: drobek-npm-${{ env.DROBEK_REF }}
+          fail-on-cache-miss: true
+
+      - name: Install (lockfile)
+        run: npm ci --no-audit --no-fund
+
+      - name: The tag matches package.json
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          [ "v$VERSION" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME != package.json v$VERSION"; exit 1; }
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Pack
+        run: npm pack
+
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PRE=""
+          case "$VERSION" in *-*) PRE="--prerelease" ;; esac
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes $PRE "drobek-module-counter-$VERSION.tgz"
+
+      # Trusted Publishing needs npm >= 11.5.1 (Node 22 ships npm 10).
+      - name: npm with Trusted Publishing
+        if: vars.NPM_PUBLISH == 'true'
+        run: npm install -g npm@^11.5.1
+
+      - name: npm publish (skips a version npm already has)
+        if: vars.NPM_PUBLISH == 'true'
+        run: |
+          if [ -n "$(npm view "drobek-module-counter@$VERSION" version 2>/dev/null)" ]; then
+            echo "drobek-module-counter@$VERSION is already on npm"; exit 0
+          fi
+          TAG=latest
+          case "$VERSION" in *-*) TAG=next ;; esac
+          npm publish "drobek-module-counter-$VERSION.tgz" --access public --tag "$TAG"
