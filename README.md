@@ -108,8 +108,8 @@ Besides the core codes (`rate_limited`, `unauthorized`, `forbidden`,
 Node 22. The module contract is on npm as `@freema/drobek-modules` (the
 browser SDK core as `@freema/drobek-sdk`); `package.json` installs them under
 the names the code imports through npm aliases —
-`"@drobek/modules": "npm:@freema/drobek-modules@^0.3.3"` and
-`"@drobek/sdk": "npm:@freema/drobek-sdk@^0.3.3"` in `devDependencies` — and
+`"@drobek/modules": "npm:@freema/drobek-modules@^0.7.0"` and
+`"@drobek/sdk": "npm:@freema/drobek-sdk@^0.7.0"` in `devDependencies` — and
 keeps `"@drobek/modules": ">=0.2.0"` as the peer the server provides:
 
 ```sh
