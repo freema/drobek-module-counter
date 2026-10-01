@@ -42,8 +42,8 @@
     "drizzle-orm": ">=0.45.0"
   },
   "devDependencies": {
-    "@drobek/modules": "npm:@freema/drobek-modules@^0.3.3",
-    "@drobek/sdk": "npm:@freema/drobek-sdk@^0.3.3",
+    "@drobek/modules": "npm:@freema/drobek-modules@^0.7.0",
+    "@drobek/sdk": "npm:@freema/drobek-sdk@^0.7.0",
     "@electric-sql/pglite": "^0.2.17",
     "@types/node": "^22",
     "drizzle-orm": "^0.45.3",
