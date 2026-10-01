@@ -8,8 +8,8 @@ import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { buildSdk, isDefinedModule, loadModules, type DB, type HookApp, type Logger } from '@drobek/modules';
-import { coreMigrationsDir, createModuleTestContext, createTestApp } from '@drobek/modules/testing';
+import { isDefinedModule, type DB, type HookApp, type Logger } from '@drobek/modules';
+import { buildSdk, coreMigrationsDir, createModuleTestContext, createTestApp, loadModules } from '@drobek/modules/testing';
 import mod from './index.js';
 
 let pg: PGlite;
